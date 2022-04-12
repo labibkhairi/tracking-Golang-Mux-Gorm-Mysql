@@ -30,37 +30,43 @@ type Result struct {
 	Message string      `json:"message"`
 }
 
-//type T_CNOTE_SINGLE struct {
-//	CityName          string `json:"city_name"`
-//	CnoteAmount       string `json:"cnote_amount"`
-//	CnoteCustNo       string `json:"cnote_cust_no"`
-//	CnoteDate         string `json:"cnote_date"`
-//	CnoteDestination  string `json:"cnote_destination"`
-//	CnoteGoodsDescr   string `json:"cnote_goods_descr"`
-//	CnoteNo           string `json:"cnote_no"`
-//	CnoteOrigin       string `json:"cnote_origin"`
-//	CnotePodDate      string `json:"cnote_pod_date"`
-//	CnotePodReceiver  string `json:"cnote_pod_receiver"`
-//	CnoteReceiverName string `json:"cnote_receiver_name"`
-//	CnoteServicesCode string `json:"cnote_services_code"`
-//	CnoteWeight       string `json:"cnote_weight"`
-//	CustType          string `json:"cust_type"`
-//	EstimateDelivery  string `json:"estimate_delivery"`
-//	FreightCharge     string `json:"freight_charge"`
-//	Insuranceamount   string `json:"insuranceamount"`
-//	Keterangan        string `json:"keterangan"`
-//	LastStatus        string `json:"last_status"`
-//	Lat               string `json:"lat"`
-//	Long              string `json:"long"`
-//	Photo             string `json:"photo"`
-//	PodCode           string `json:"pod_code"`
-//	PodStatus         string `json:"pod_status"`
-//	Priceperkg        string `json:"priceperkg"`
-//	ReferenceNumber   string `json:"reference_number"`
-//	Servicetype       string `json:"servicetype"`
-//	Shippingcost      string `json:"shippingcost"`
-//	Signature         string `json:"signature"`
-//}
+// T_CNOTE_SINGLE is a representation of table cnote single
+type T_CNOTE_SINGLE struct {
+	CityName          string `json:"city_name"`
+	CnoteAmount       string `json:"cnote_amount"`
+	CnoteCustNo       string `json:"cnote_cust_no"`
+	CnoteDate         string `json:"cnote_date"`
+	CnoteDestination  string `json:"cnote_destination"`
+	CnoteGoodsDescr   string `json:"cnote_goods_descr"`
+	CnoteNo           string `json:"cnote_no"`
+	CnoteOrigin       string `json:"cnote_origin"`
+	CnotePodDate      string `json:"cnote_pod_date"`
+	CnotePodReceiver  string `json:"cnote_pod_receiver"`
+	CnoteReceiverName string `json:"cnote_receiver_name"`
+	CnoteServicesCode string `json:"cnote_services_code"`
+	CnoteWeight       string `json:"cnote_weight"`
+	CustType          string `json:"cust_type"`
+	EstimateDelivery  string `json:"estimate_delivery"`
+	FreightCharge     string `json:"freight_charge"`
+	Insuranceamount   string `json:"insuranceamount"`
+	Keterangan        string `json:"keterangan"`
+	LastStatus        string `json:"last_status"`
+	Lat               string `json:"lat"`
+	Long              string `json:"long"`
+	Photo             string `json:"photo"`
+	PodCode           string `json:"pod_code"`
+	PodStatus         string `json:"pod_status"`
+	Priceperkg        string `json:"priceperkg"`
+	ReferenceNumber   string `json:"reference_number"`
+	Servicetype       string `json:"servicetype"`
+	Shippingcost      string `json:"shippingcost"`
+	Signature         string `json:"signature"`
+}
+
+// Respond of cnote
+type ResultCnote struct {
+	Cnote interface{} `json:"cnote"`
+}
 
 // Main
 func main() {
@@ -72,7 +78,7 @@ func main() {
 		log.Println("Connection established")
 	}
 
-	db.AutoMigrate(&Product{})
+	db.AutoMigrate(&T_CNOTE_SINGLE{})
 	handleRequests()
 }
 
@@ -101,10 +107,12 @@ func handleRequests() {
 
 	myRouter.HandleFunc("/", homePage)
 	myRouter.HandleFunc("/api/products", createProduct).Methods("POST")
+	myRouter.HandleFunc("/api/cnotes", createCnote).Methods("POST")
 	myRouter.HandleFunc("/api/products", getProducts).Methods("GET")
 	myRouter.HandleFunc("/api/products/{id}", getProduct).Methods("GET")
-	myRouter.HandleFunc("/api/products/{id}", updateProduct).Methods("PUT")
-	myRouter.HandleFunc("/api/products/{id}", deleteProduct).Methods("DELETE")
+	myRouter.HandleFunc("/api/cnotes/{cnote_no}", getCnote).Methods("GET")
+	//myRouter.HandleFunc("/api/products/{id}", updateProduct).Methods("PUT")
+	//myRouter.HandleFunc("/api/products/{id}", deleteProduct).Methods("DELETE")
 
 	log.Fatal(http.ListenAndServe(":9999", myRouter))
 }
@@ -131,6 +139,26 @@ func createProduct(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(result)
+}
+
+func createCnote(w http.ResponseWriter, r *http.Request) {
+	payloads, _ := ioutil.ReadAll(r.Body)
+
+	var cnote T_CNOTE_SINGLE
+	json.Unmarshal(payloads, &cnote)
+
+	db.Create(&cnote)
+
+	res := ResultCnote{Cnote: cnote}
+	resultcnote, err := json.Marshal(res)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(resultcnote)
 }
 
 func getProducts(w http.ResponseWriter, r *http.Request) {
@@ -171,6 +199,26 @@ func getProduct(w http.ResponseWriter, r *http.Request) {
 	w.Write(result)
 }
 
+func getCnote(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	CnoteNo := vars["cnote"]
+
+	var cnote T_CNOTE_SINGLE
+
+	db.First(&cnote, CnoteNo)
+
+	res := ResultCnote{Cnote: cnote}
+	resultcnote, err := json.Marshal(res)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(resultcnote)
+}
+
 func updateProduct(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	productID := vars["id"]
@@ -196,23 +244,23 @@ func updateProduct(w http.ResponseWriter, r *http.Request) {
 	w.Write(result)
 }
 
-func deleteProduct(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	productID := vars["id"]
-
-	var product Product
-
-	db.First(&product, productID)
-	db.Delete(&product)
-
-	res := Result{Code: 200, Message: "Success delete product"}
-	result, err := json.Marshal(res)
-
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(result)
-}
+////func deleteProduct(w http.ResponseWriter, r *http.Request) {
+////	vars := mux.Vars(r)
+////	productID := vars["id"]
+////
+////	var product Product
+////
+////	db.First(&product, productID)
+////	db.Delete(&product)
+////
+////	res := Result{Code: 200, Message: "Success delete product"}
+////	result, err := json.Marshal(res)
+////
+////	if err != nil {
+////		http.Error(w, err.Error(), http.StatusInternalServerError)
+////	}
+////
+////	w.Header().Set("Content-Type", "application/json")
+////	w.WriteHeader(http.StatusOK)
+////	w.Write(result)
+//}
